@@ -16,16 +16,12 @@ local PlayerData = {}
 PlayerData.store = {}
 PlayerData.interface = {}
 PlayerData.schema = {}
-PlayerData.metatable = {__index = function(t, k)
-		return PlayerData.schema[k](t)
-	end
-}
+PlayerData.metatable = {}
 
 type PlayerDataObject = {
 	inventory: { item },
 	stats: {},
 	experience: number,
-	userId: number,
 	equipped: {},
 	settings: {},
 	Level: number?,
@@ -57,27 +53,31 @@ function PlayerData.interface:Init(player: Player)
 	end
 
 	PlayerData.store[player.UserId] = playerData
-	print(PlayerData.store[player.UserId].Level)
+	print(PlayerData.store[player.UserId])
 end
 
 --schema--------------------------------------------------------------------------------------------
 
-function PlayerData.schema.__index(t, k)
-	if PlayerData.schema[k] then
-		return PlayerData.schema[k]
-	end
-end
-
-function PlayerData.schema.Level(self: PlayerData): number
-	print(self.experience)
-	return math.floor(self.experience / 100)
-end
-
 function PlayerData.schema.getPlayer(self: PlayerData): Player
-	return Players:GetPlayerByUserId(self.userId)
+	return Players:GetPlayerByUserId(table.find(PlayerData.store, self))
 end
 
 --metatable-----------------------------------------------------------------------------------------
+
+local functions = {
+	Level = function(self: PlayerData): number
+		print(self.experience)
+		return math.floor(self.experience / 100)
+	end,
+}
+
+function PlayerData.metatable.__index(self: PlayerData, key: string)
+	if functions[key] then
+		return functions[key](self)
+	else
+		return PlayerData.schema[key]
+	end
+end
 
 ----------------------------------------------------------------------------------------------------
 
