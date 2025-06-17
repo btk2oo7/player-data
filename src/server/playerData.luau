@@ -9,6 +9,17 @@ local PlayerDataStore = DataStoreService:GetDataStore("PlayerDataStore")
 local Item = require(ReplicatedStorage.Shared.item)
 type item = Item.item
 
+--events--------------------------------------------------------------------------------------------
+
+local events = Instance.new("Folder")
+events.Name = "Events"
+
+local sendEvent = Instance.new("RemoteEvent")
+sendEvent.Name = "send"
+sendEvent.Parent = events
+
+events.Parent = ReplicatedStorage
+
 ----------------------------------------------------------------------------------------------------
 
 local PlayerData = {}
@@ -52,8 +63,8 @@ function PlayerData.interface:Init(player: Player)
 		setmetatable(playerData, PlayerData.metatable)
 	end
 
-	PlayerData.store[player.UserId] = playerData
-	print(PlayerData.store[player.UserId])
+	PlayerData.store[player.UserId] = playerData :: PlayerData
+	sendEvent:FireClient(player, playerData)
 end
 
 --schema--------------------------------------------------------------------------------------------
@@ -80,6 +91,10 @@ function PlayerData.metatable.__index(self: PlayerData, key: string)
 end
 
 ----------------------------------------------------------------------------------------------------
+
+for _, player in Players:GetPlayers() do
+	PlayerData.interface:Init(player)
+end
 
 Players.PlayerAdded:Connect(function(player)
 	PlayerData.interface:Init(player)
