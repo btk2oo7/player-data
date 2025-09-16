@@ -15,7 +15,7 @@ local events = Instance.new("Folder")
 events.Name = "Events"
 
 local sendEvent = Instance.new("RemoteEvent")
-sendEvent.Name = "send"
+sendEvent.Name = "dataChanged"
 sendEvent.Parent = events
 
 events.Parent = ReplicatedStorage
@@ -67,6 +67,11 @@ function PlayerData.interface:Init(player: Player)
 	sendEvent:FireClient(player, playerData)
 end
 
+function PlayerData.interface:Save(player: Player)
+	local playerData = PlayerData.store[player.UserId]
+	PlayerDataStore:SetAsync(player.UserId, playerData)
+end
+
 --schema--------------------------------------------------------------------------------------------
 
 function PlayerData.schema.getPlayer(self: PlayerData): Player
@@ -89,7 +94,6 @@ function PlayerData.metatable.__index(self: PlayerData, key: string)
 		return PlayerData.schema[key]
 	end
 end
-
 ----------------------------------------------------------------------------------------------------
 
 for _, player in Players:GetPlayers() do
