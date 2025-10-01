@@ -18,11 +18,11 @@ PlayerData.schema = {}
 PlayerData.metatable = {}
 
 type PlayerDataObject = {
-	inventory: { item },
-	stats: { [string]: number? },
+	inventory: { item }?,
+	stats: { [string]: number? }?,
 	experience: number,
-	equipped: {},
-	settings: { [string]: any },
+	equipped: {}?,
+	settings: { [string]: any }?,
 	Level: number?,
 }
 
@@ -30,7 +30,7 @@ export type PlayerData = typeof(setmetatable({} :: PlayerDataObject, {} :: typeo
 
 --interface-----------------------------------------------------------------------------------------
 
-function PlayerData.interface.new(player: Player): PlayerData
+function PlayerData.interface.new(...): PlayerData
 	local self = {
 		inventory = {},
 		stats = {},
@@ -43,9 +43,31 @@ function PlayerData.interface.new(player: Player): PlayerData
 	return self
 end
 
+function PlayerData.interface.fromStats(...): PlayerData
+	local self = PlayerData.interface.new()
+
+	for stat, value in table.pack(...) do
+		if self.stats[stat] then
+			self.stats[stat] = value
+		end
+	end
+
+	return self
+end
+
+function PlayerData.interface.fromInventory(...: item): PlayerData --i think i'll do inventory weight-based like deepwoken
+	local self = PlayerData.interface.new()
+
+	for _, item: item in table.pack(...) do
+		table.insert(self.inventory, item)
+	end
+
+	return self
+end
+
 --local---------------------------------------------------------------------------------------------
 
-local function update(t: {}, changed: {})
+local function update(t: PlayerDataObject, changed: PlayerDataObject)
 	for key, value in changed do --loop through table of changes
 		if typeof(value) == "table" then --if something is a table,
 			update(t[key], value) --call update() on it (recursively)
@@ -56,7 +78,7 @@ local function update(t: {}, changed: {})
 end
 
 local function dataChanged(changed: { [string]: any })
-	update(PlayerData.cache, changed)
+	update(PlayerData.cache, changed :: PlayerDataObject)
 end
 
 ----------------------------------------------------------------------------------------------------

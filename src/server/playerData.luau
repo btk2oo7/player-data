@@ -30,18 +30,19 @@ PlayerData.schema = {}
 PlayerData.metatable = {}
 
 type PlayerDataObject = {
-	inventory: { item },
-	stats: {},
+	inventory: { item }?,
+	stats: { [string]: number? }?,
 	experience: number,
-	equipped: {},
-	settings: {},
+	equipped: {}?,
+	settings: { [string]: any }?,
 	Level: number?,
 }
+
 export type PlayerData = typeof(setmetatable({} :: PlayerDataObject, {} :: typeof(PlayerData.metatable)))
 
 --interface-----------------------------------------------------------------------------------------
 
-function PlayerData.interface.new(player: Player): PlayerData
+function PlayerData.interface.new(player: Player, ...): PlayerData
 	local self = {
 		inventory = {},
 		stats = {},
