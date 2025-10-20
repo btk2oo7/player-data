@@ -28,9 +28,17 @@ local schema = {}
 local metatable = {}
 
 type PlayerDataObject = {
-	inventory: { item }?,
-	stats: { [string]: number? }?,
-	experience: number,
+	inventory: { item? },
+	stats: {
+		money: number,
+		experience: number,
+	},
+	attributes: {
+		strength: number,
+		agility: number,
+		willpower: number,
+		weapon: number,
+	},
 	equipped: {}?,
 	settings: { [string]: any }?,
 	Level: number?,
@@ -38,42 +46,9 @@ type PlayerDataObject = {
 
 export type PlayerData = typeof(setmetatable({} :: PlayerDataObject, {} :: typeof(metatable)))
 
---interface-----------------------------------------------------------------------------------------
-
-function interface.new(player: Player, ...): PlayerData
-	local self = {
-		inventory = {},
-		stats = {},
-		experience = 0,
-		equipped = {},
-		settings = {},
-	}
-
-	setmetatable(self, metatable)
-	return self
-end
-
-function interface:Init(player: Player)
-	local playerData = PlayerDataStore:GetAsync(player.UserId)
-
-	if not playerData then
-		playerData = interface.new(player)
-	else
-		setmetatable(playerData, metatable)
-	end
-
-	store[player.UserId] = playerData :: PlayerData
-	sendEvent:FireClient(player, playerData)
-end
-
-function interface:Save(player: Player)
-	local playerData = store[player.UserId]
-	PlayerDataStore:SetAsync(player.UserId, playerData)
-end
-
 --local---------------------------------------------------------------------------------------------
 
-local function change(t: {}, changed: {}, func: ((... any)->any)?)
+local function change(t: {}, changed: {}, func: ((...any) -> any)?)
 	for key, value in changed do
 		if typeof(value) == "table" then
 			change(t[key], value :: {})
@@ -85,6 +60,68 @@ local function change(t: {}, changed: {}, func: ((... any)->any)?)
 			t[key] = value
 		end
 	end
+end
+
+local function compare(a: {}, b: {} | PlayerData)
+	for key, value in a do
+		if typeof(value) == "table" then
+			compare(value :: {}, b[key])
+		else
+			if value ~= b[key] then
+				return false
+			end
+		end
+	end
+	return true
+end
+
+--interface-----------------------------------------------------------------------------------------
+
+function interface.new(data: PlayerDataObject?): PlayerData
+	local self
+	if data then
+		self = data
+	else
+		self = {
+			inventory = {},
+			stats = {
+				money = 0,
+				experience = 0,
+			},
+			attributes = {
+				strength = 0,
+				agility = 0,
+				willpower = 0,
+				weapon = 0,
+			},
+			equipped = {},
+			settings = {},
+		}
+	end
+
+	setmetatable(self, metatable)
+	return self
+end
+
+function interface:Init(player: Player)
+	local playerData = PlayerDataStore:GetAsync(player.UserId)
+
+	if not compare(playerData, interface.new()) then
+	end
+
+	if not playerData then
+		playerData = interface.new()
+	else
+		setmetatable(playerData, metatable)
+	end
+
+	store[player.UserId] = playerData :: PlayerData
+	sendEvent:FireClient(player, playerData)
+end
+
+function interface:Save(player: Player)
+	local playerData = store[player.UserId]
+	PlayerDataStore:SetAsync(player.UserId, playerData)
 end
 
 --schema--------------------------------------------------------------------------------------------
@@ -103,8 +140,8 @@ end
 
 local functions = {
 	Level = function(self: PlayerData): number
-		print(self.experience)
-		return math.floor(self.experience / 100)
+		print(self.stats.experience)
+		return math.floor(self.stats.experience / 100)
 	end,
 }
 
