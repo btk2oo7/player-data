@@ -1,3 +1,5 @@
+--!strict
+
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Item = require(ReplicatedStorage.Shared.item)
@@ -11,42 +13,64 @@ local dataChangedEvent: RemoteEvent = events:FindFirstChild("dataChanged") or er
 
 ----------------------------------------------------------------------------------------------------
 
-local PlayerData = {}
-PlayerData.cache = {}
-PlayerData.interface = {}
-PlayerData.schema = {}
-PlayerData.metatable = {}
+local cache
+local interface = {}
+local schema = {}
+local metatable = {}
 
 type PlayerDataObject = {
-	inventory: { item }?,
-	stats: { [string]: number? }?,
-	experience: number,
+	inventory: { item? },
+	stats: {
+		money: number,
+		experience: number,
+	},
+	attributes: {
+		strength: number,
+		agility: number,
+		willpower: number,
+		weapon: number,
+	},
 	equipped: {}?,
 	settings: { [string]: any }?,
 	Level: number?,
 }
 
-export type PlayerData = typeof(setmetatable({} :: PlayerDataObject, {} :: typeof(PlayerData.metatable)))
+export type PlayerData = typeof(setmetatable({} :: PlayerDataObject, {} :: typeof(metatable)))
 
 --interface-----------------------------------------------------------------------------------------
 
-function PlayerData.interface.new(...): PlayerData
-	local self = {
-		inventory = {},
-		stats = {},
-		experience = 0,
-		equipped = {},
-		settings = {},
-	}
+function interface.new(data: PlayerDataObject?): PlayerData
+	local self
+	if data then
+		self = data
+	else
+		self = {
+			inventory = {},
+			stats = {
+				money = 0,
+				experience = 0,
+			},
+			attributes = {
+				strength = 0,
+				agility = 0,
+				willpower = 0,
+				weapon = 0,
+			},
+			equipped = {},
+			settings = {},
+		}
+	end
 
-	setmetatable(self, PlayerData.metatable)
+	setmetatable(self, metatable)
 	return self
 end
 
-function PlayerData.interface.fromStats(...): PlayerData
-	local self = PlayerData.interface.new()
+cache = interface.new()
 
-	for stat, value in table.pack(...) do
+function interface.fromStats(list: { [string]: number }): PlayerData
+	local self = interface.new()
+
+	for stat, value in list do
 		if self.stats[stat] then
 			self.stats[stat] = value
 		end
@@ -55,8 +79,20 @@ function PlayerData.interface.fromStats(...): PlayerData
 	return self
 end
 
-function PlayerData.interface.fromInventory(...: item): PlayerData --i think i'll do inventory weight-based like deepwoken
-	local self = PlayerData.interface.new()
+function interface.fromAttributes(list: { [string]: number }): PlayerData
+	local self = interface.new()
+
+	for attribute, value in list do
+		if self.attributes[attribute] then
+			self.attributes[attribute] = value
+		end
+	end
+
+	return self
+end
+
+function interface.fromInventory(...: item): PlayerData --i think i'll do inventory weight-based like deepwoken
+	local self = interface.new()
 
 	for _, item: item in table.pack(...) do
 		table.insert(self.inventory, item)
@@ -67,22 +103,28 @@ end
 
 --local---------------------------------------------------------------------------------------------
 
-local function update(t: PlayerDataObject, changed: PlayerDataObject)
-	for key, value in changed do --loop through table of changes
-		if typeof(value) == "table" then --if something is a table,
-			update(t[key], value) --call update() on it (recursively)
+local function change(t: {} | PlayerData, changed: {any}, func: ((...string) -> any)?)
+	for key, value in changed do
+		if typeof(value) == "table" then
+			change(t[key], value)
 		else
-			t[key] = value --otherwise, just update value
+			if func then
+				t[key] = func(t[key], value)
+				continue
+			end
+			t[key] = value
 		end
 	end
 end
 
-local function dataChanged(changed: { [string]: any })
-	update(PlayerData.cache, changed :: PlayerDataObject)
+local function dataChanged(changed)
+	change(cache, changed)
 end
+
+--metatable-----------------------------------------------------------------------------------------
 
 ----------------------------------------------------------------------------------------------------
 
 dataChangedEvent.OnClientEvent:Connect(dataChanged)
 
-return PlayerData.interface
+return interface

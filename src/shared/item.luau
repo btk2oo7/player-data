@@ -9,7 +9,7 @@ export type itemObject = {
 	uniqueId: string,
 	quantity: number,
 	data: {},
-	info: itemInfo?
+	info: itemInfo?,
 }
 
 export type itemInfo = {
@@ -43,9 +43,7 @@ local items: { itemInfo } = {
 			damage = 34,
 			attackSpeed = 1, --seconds per swing
 			range = 5, --studs
-			animations = {
-
-			},
+			animations = {},
 		},
 	},
 }
@@ -66,13 +64,25 @@ function interface.lookup(id): itemInfo?
 	return
 end
 
-function interface.new(itemId: number, ...): item
+function interface.new(itemId: number, list: { [string]: any }?): item
 	local self = {
 		id = itemId,
 		uniqueId = HttpService:GenerateGUID(false),
 		quantity = 1,
 		data = {},
 	}
+
+	-- if list then
+	-- 	for key, value in list do
+	-- 		if not self[key] then
+	-- 			continue
+	-- 		end
+	-- 		if typeof(self[key]) ~= typeof(value) then
+	-- 			continue
+	-- 		end
+	-- 		self[key] = value
+	-- 	end
+	-- end
 
 	setmetatable(self, metatable)
 	return self

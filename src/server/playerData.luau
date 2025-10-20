@@ -22,12 +22,10 @@ events.Parent = ReplicatedStorage
 
 ----------------------------------------------------------------------------------------------------
 
-local PlayerData = {}
-
-PlayerData.store = {}
-PlayerData.interface = {}
-PlayerData.schema = {}
-PlayerData.metatable = {}
+local store = {}
+local interface = {}
+local schema = {}
+local metatable = {}
 
 type PlayerDataObject = {
 	inventory: { item }?,
@@ -38,11 +36,11 @@ type PlayerDataObject = {
 	Level: number?,
 }
 
-export type PlayerData = typeof(setmetatable({} :: PlayerDataObject, {} :: typeof(PlayerData.metatable)))
+export type PlayerData = typeof(setmetatable({} :: PlayerDataObject, {} :: typeof(metatable)))
 
 --interface-----------------------------------------------------------------------------------------
 
-function PlayerData.interface.new(player: Player, ...): PlayerData
+function interface.new(player: Player, ...): PlayerData
 	local self = {
 		inventory = {},
 		stats = {},
@@ -51,32 +49,54 @@ function PlayerData.interface.new(player: Player, ...): PlayerData
 		settings = {},
 	}
 
-	setmetatable(self, PlayerData.metatable)
+	setmetatable(self, metatable)
 	return self
 end
 
-function PlayerData.interface:Init(player: Player)
+function interface:Init(player: Player)
 	local playerData = PlayerDataStore:GetAsync(player.UserId)
 
 	if not playerData then
-		playerData = PlayerData.interface.new(player)
+		playerData = interface.new(player)
 	else
-		setmetatable(playerData, PlayerData.metatable)
+		setmetatable(playerData, metatable)
 	end
 
-	PlayerData.store[player.UserId] = playerData :: PlayerData
+	store[player.UserId] = playerData :: PlayerData
 	sendEvent:FireClient(player, playerData)
 end
 
-function PlayerData.interface:Save(player: Player)
-	local playerData = PlayerData.store[player.UserId]
+function interface:Save(player: Player)
+	local playerData = store[player.UserId]
 	PlayerDataStore:SetAsync(player.UserId, playerData)
+end
+
+--local---------------------------------------------------------------------------------------------
+
+local function change(t: {}, changed: {}, func: ((... any)->any)?)
+	for key, value in changed do
+		if typeof(value) == "table" then
+			change(t[key], value :: {})
+		else
+			if func then
+				t[key] = func(t[key], value)
+				continue
+			end
+			t[key] = value
+		end
+	end
 end
 
 --schema--------------------------------------------------------------------------------------------
 
-function PlayerData.schema.getPlayer(self: PlayerData): Player
-	return Players:GetPlayerByUserId(table.find(PlayerData.store, self))
+function schema.getPlayer(self: PlayerData): Player
+	return Players:GetPlayerByUserId(table.find(store, self))
+end
+
+function schema:add(...: PlayerDataObject)
+	for _, t in table.pack(...) do
+		change(self, t)
+	end
 end
 
 --metatable-----------------------------------------------------------------------------------------
@@ -88,21 +108,21 @@ local functions = {
 	end,
 }
 
-function PlayerData.metatable.__index(self: PlayerData, key: string)
+function metatable.__index(self: PlayerData, key: string)
 	if functions[key] then
 		return functions[key](self)
 	else
-		return PlayerData.schema[key]
+		return schema[key]
 	end
 end
 ----------------------------------------------------------------------------------------------------
 
 for _, player in Players:GetPlayers() do
-	PlayerData.interface:Init(player)
+	interface:Init(player)
 end
 
 Players.PlayerAdded:Connect(function(player)
-	PlayerData.interface:Init(player)
+	interface:Init(player)
 end)
 
-return table.freeze(PlayerData.interface)
+return table.freeze(interface)
